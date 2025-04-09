@@ -78,18 +78,27 @@ async def main():
 
     loop = asyncio.get_running_loop()
 
+    # Создаем задачи
+    server_task = loop.create_task(server.serve_forever())
+    command_task = loop.create_task(read_server_commands(loop))
+    stop_task = loop.create_task(stop_server_when_no_clients(server))
+
+    tasks = [server_task, command_task, stop_task]
+
     try:
-        # Запускаем сервер и функции обслуживания команд и остановки сервера параллельно
-        await asyncio.gather(
-            server.serve_forever(),        # Сервер принимает подключения
-            read_server_commands(loop),    # Читаем команды с консоли
-            stop_server_when_no_clients(server),  # Проверяем условие остановки сервера
-        )
+        # Ждем завершения задач
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        # Здесь мы ловим CancelledError, который возникает при отмене задач
+        pass
     except KeyboardInterrupt:
         # Обрабатываем прерывание по Ctrl+C
         print("Сервер прерван пользователем (Ctrl+C)")
-        server.close()  # Останавливаем сервер
+        server.close()
         await server.wait_closed()
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         print("Сервер остановлен")
 
