@@ -10,6 +10,8 @@ async def tcp_echo_client():
     reader = None
     writer = None
 
+    loop = asyncio.get_running_loop()
+
     try:
         while True:
             # Пытаемся установить соединение с сервером
@@ -24,7 +26,7 @@ async def tcp_echo_client():
 
         while True:
             # Читаем сообщение от пользователя в отдельном потоке, чтобы не блокировать цикл событий
-            message = await asyncio.to_thread(input, "Введите сообщение (или 'exit' для выхода): ")
+            message = await loop.run_in_executor(None, input, "Введите сообщение (или 'exit' для выхода): ")
             if message.lower() == 'exit':
                 # Если введена команда 'exit', выходим из цикла
                 print("Отключение от сервера.")
